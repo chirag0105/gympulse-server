@@ -1,68 +1,39 @@
-const fs = require('fs');
-const path = require('path');
-
-// Simple logger to a file we can read via Hostinger File Manager
-const logToFile = (msg) => {
-    const logPath = path.join(__root, 'startup.log');
-    const timestamp = new Date().toISOString();
-    fs.appendFileSync(logPath, `[${timestamp}] ${msg}\n`);
-};
-
-global.__root = path.join(__dirname, '..');
-
-logToFile('Server starting...');
-
-// Global error handlers
-process.on('uncaughtException', (err) => {
-    logToFile('UNCAUGHT EXCEPTION: ' + err.message + '\n' + err.stack);
-    console.error('UNCAUGHT EXCEPTION:', err);
-});
-process.on('unhandledRejection', (reason, promise) => {
-    logToFile('UNHANDLED REJECTION: ' + reason);
-    console.error('UNHANDLED REJECTION:', reason);
-});
-
+// EXTREMELY MINIMAL STARTUP
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const env = require('./config/env');
-const errorHandler = require('./middleware/errorHandler');
-const notFound = require('./middleware/notFound');
+const path = require('path');
 
-logToFile('Loaded dependencies.');
+// Read env directly from process.env (Hostinger injected)
+const CORS_ORIGIN = process.env.CORS_ORIGIN || '*';
+const NODE_ENV = process.env.NODE_ENV || 'production';
 
 const app = express();
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
-    origin: env.CORS_ORIGIN,
+    origin: CORS_ORIGIN,
     credentials: true,
 }));
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-logToFile('CORS Origin: ' + env.CORS_ORIGIN);
-
-// Health check
+// Natively expose health check
 app.get('/api/health', (req, res) => {
     res.json({
         success: true,
-        data: {
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            environment: env.NODE_ENV
-        },
+        message: 'GymPulse API is alive',
+        timestamp: new Date().toISOString(),
+        node_version: process.version
     });
 });
 
-// Dummy route for test
 app.get('/', (req, res) => {
-    res.send('GymPulse API is Running');
+    res.send('<h1>GymPulse API Server</h1><p>Status: Working</p>');
 });
 
-// Protected routes (wrap in try-catch to log load errors)
+// Import shared routes logic
 try {
     app.use('/api/auth', require('./routes/auth'));
     app.use('/api/exercises', require('./routes/exercises'));
@@ -73,51 +44,29 @@ try {
     app.use('/api/measurements', require('./routes/measurements'));
     app.use('/api/admin', require('./routes/admin'));
     app.use('/api/notifications', require('./routes/notifications').router);
-    logToFile('Routes loaded.');
-} catch (err) {
-    logToFile('Error loading routes: ' + err.message);
+} catch (e) {
+    console.error('Route load error:', e.message);
 }
 
-app.use(notFound);
-app.use(errorHandler);
-
+// Database Connection
 const { sequelize } = require('./config/database');
 const db = require('./models');
 
-const startServer = async () => {
+const start = async () => {
     try {
-        logToFile('Attempting DB sync...');
+        console.log('Connecting to DB...');
         await db.sequelize.sync({ alter: false });
-        logToFile('DB synced.');
+        console.log('DB synced.');
 
-        try {
-            const createSuperAdmin = require('./seeders/create-super-admin');
-            await createSuperAdmin();
-            logToFile('Seeder ran.');
-        } catch (e) {
-            logToFile('Seeder check skipped: ' + e.message);
-        }
-
-        // IMPORTANT FIX: Hostinger might pass a non-integer port (like a socket)
-        let PORT = process.env.PORT;
-        if (!PORT || isNaN(parseInt(PORT, 10))) {
-            // If PORT is not a number, it might be a socket path. Use it as is.
-            // If it's missing entirely, use 3000.
-            PORT = PORT || 3000;
-        } else {
-            PORT = parseInt(PORT, 10);
-        }
-
+        const PORT = process.env.PORT || 3000;
         app.listen(PORT, () => {
-            logToFile(`Server successfully listening on: ${PORT}`);
-            console.log(`GymPulse API running on ${PORT}`);
+            console.log(`Server listening on ${PORT}`);
         });
     } catch (err) {
-        logToFile('CRITICAL BOOT ERROR: ' + err.message + '\n' + err.stack);
-        console.error('BOOT ERROR:', err);
+        console.error('Fatal start error:', err.message);
     }
 };
 
-startServer();
+start();
 
 module.exports = app;
