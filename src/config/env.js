@@ -15,6 +15,9 @@ const env = {
     JWT_SECRET: process.env.JWT_SECRET || 'gympulse-dev-secret-change-in-production',
     JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
 
+    // CORS
+    CORS_ORIGIN: process.env.CORS_ORIGIN || 'http://localhost:3000',
+
     // Super Admin
     SUPER_ADMIN_EMAIL: process.env.SUPER_ADMIN_EMAIL || 'admin@gympulse.app',
     SUPER_ADMIN_PASSWORD: process.env.SUPER_ADMIN_PASSWORD || 'Admin123!',
