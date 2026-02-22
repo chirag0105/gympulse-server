@@ -1,26 +1,19 @@
-const express = require('express');
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-// THE ULTIMATE PROOF: Create a file in the root
-try {
-    fs.writeFileSync(path.join(__dirname, '..', 'NODE_IS_RUNNING.txt'), 'Node started at ' + new Date().toISOString());
-} catch (e) {
-    // If that fails, try current dir
-    fs.writeFileSync('NODE_IS_RUNNING.txt', 'Node started at ' + new Date().toISOString());
-}
+// FORCE LOGGING
+const logFile = path.join(__dirname, 'BOOT_LOG.txt');
+fs.writeFileSync(logFile, 'NODE (INDEX.JS) IS EXECUTING AT ' + new Date().toISOString() + '\n');
 
-const app = express();
+const server = http.createServer((req, res) => {
+    fs.appendFileSync(logFile, 'Request received: ' + req.url + '\n');
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('GYMPULSE NODE (INDEX) IS WORKING\nTime: ' + new Date().toISOString());
+});
+
 const PORT = process.env.PORT || 3000;
-
-app.get('/', (req, res) => {
-    res.send('<h1>GymPulse Node Test</h1><p>If you see this, Node is working!</p>');
-});
-
-app.get('/api/health', (req, res) => {
-    res.json({ success: true, message: 'Minimal test running' });
-});
-
-app.listen(PORT, () => {
-    console.log('Server running on ' + PORT);
+server.listen(PORT, '0.0.0.0', () => {
+    fs.appendFileSync(logFile, 'Listening on ' + PORT + ' at 0.0.0.0\n');
+    console.log('Server running');
 });

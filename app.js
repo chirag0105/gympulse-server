@@ -1,23 +1,20 @@
-const express = require('express');
+const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-// THE ULTIMATE PROOF: Create a file in the root
-try {
-    fs.writeFileSync('NODE_IS_RUNNING.txt', 'Node started (app.js) at ' + new Date().toISOString());
-} catch (e) { }
+// FORCE LOGGING
+const logFile = path.join(__dirname, 'BOOT_LOG.txt');
+fs.writeFileSync(logFile, 'NODE IS EXECUTING AT ' + new Date().toISOString() + '\n');
 
-const app = express();
+const server = http.createServer((req, res) => {
+    fs.appendFileSync(logFile, 'Request received: ' + req.url + '\n');
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('GYMPULSE NODE IS WORKING WITHOUT EXPRESS\nTime: ' + new Date().toISOString());
+});
+
 const PORT = process.env.PORT || 3000;
-
-app.get('/', (req, res) => {
-    res.send('<h1>GymPulse Node Test (app.js)</h1><p>If you see this, Node is working!</p>');
-});
-
-app.get('/api/health', (req, res) => {
-    res.json({ success: true, message: 'Minimal test (app.js) running' });
-});
-
-app.listen(PORT, () => {
+// Use 0.0.0.0 to ensure it binds to external requests
+server.listen(PORT, '0.0.0.0', () => {
+    fs.appendFileSync(logFile, 'Listening on ' + PORT + ' at 0.0.0.0\n');
     console.log('Server running on ' + PORT);
 });
