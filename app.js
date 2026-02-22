@@ -80,13 +80,17 @@ const start = async () => {
         await db.sequelize.sync({ alter: false });
         fs.appendFileSync(logPath, 'DB Synced.\n');
 
-        // IMPORTANT: Hostinger requires binding to process.env.PORT
-        // If it's undefined, we fallback to 3000 but log it clearly
+        // IMPORTANT: Hostinger proxy often expects 127.0.0.1 or specific binding
         const PORT = process.env.PORT || 3000;
+        fs.appendFileSync(logPath, `Attempting to listen on ${PORT}...\n`);
 
-        app.listen(PORT, '0.0.0.0', () => {
-            fs.appendFileSync(logPath, `LISTENING ON PORT ${PORT}\n`);
+        const server = app.listen(PORT, '0.0.0.0', () => {
+            fs.appendFileSync(logPath, `SUCCESS: LISTENING ON PORT ${PORT}\n`);
             console.log(`Server listening on ${PORT}`);
+        });
+
+        server.on('error', (err) => {
+            fs.appendFileSync(logPath, `LISTEN ERROR: ${err.message}\n`);
         });
     } catch (err) {
         fs.appendFileSync(logPath, `FATAL DB ERROR: ${err.message}\n`);
