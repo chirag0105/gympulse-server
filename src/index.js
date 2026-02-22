@@ -1,3 +1,11 @@
+// Global error handlers to prevent silent crashes
+process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION:', err);
+});
+process.on('unhandledRejection', (err) => {
+    console.error('UNHANDLED REJECTION:', err);
+});
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -6,12 +14,11 @@ const path = require('path');
 const env = require('./config/env');
 const errorHandler = require('./middleware/errorHandler');
 const notFound = require('./middleware/notFound');
-const passport = require('./config/passport');
 
 const app = express();
 
 // Security and utility middleware
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
     origin: env.CORS_ORIGIN,
     credentials: true,
@@ -19,9 +26,16 @@ app.use(cors({
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(passport.initialize());
 
-// API routes
+// Passport — load only if Google credentials are configured
+try {
+    const passport = require('./config/passport');
+    app.use(passport.initialize());
+} catch (err) {
+    console.warn('Passport initialization skipped:', err.message);
+}
+
+// Health check (before any DB-dependent routes)
 app.get('/api/health', (req, res) => {
     res.json({
         success: true,
@@ -29,6 +43,7 @@ app.get('/api/health', (req, res) => {
             status: 'ok',
             timestamp: new Date().toISOString(),
             environment: env.NODE_ENV,
+            cors_origin: env.CORS_ORIGIN,
         },
     });
 });
@@ -44,31 +59,14 @@ app.use('/api/measurements', require('./routes/measurements'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications').router);
 
-// Serve React static files in production
-if (env.NODE_ENV === 'production') {
-    const publicPath = path.join(__dirname, '..', 'public');
-    app.use(express.static(publicPath));
-
-    // Catch-all: serve React app for non-API routes
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(publicPath, 'index.html'));
-    });
-}
-
 // Error handling
 app.use(notFound);
 app.use(errorHandler);
 
 // Start server
-const PORT = env.PORT;
+const PORT = env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`
-  ╔═══════════════════════════════════════╗
-  ║   🏋️  GymPulse API Server            ║
-  ║   Port: ${PORT}                         ║
-  ║   Mode: ${env.NODE_ENV.padEnd(25)}║
-  ╚═══════════════════════════════════════╝
-  `);
+    console.log(`GymPulse API running on port ${PORT} in ${env.NODE_ENV} mode`);
 });
 
 module.exports = app;
