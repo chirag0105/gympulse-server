@@ -2,18 +2,36 @@ const fs = require('fs');
 const path = require('path');
 const logPath = path.join(__dirname, 'BOOT_LOG.txt');
 
-// Try to write to current dir and parent dir just in case
-try {
-    fs.writeFileSync('BOOT_LOG.txt', `STARTING FROM ${__filename} at ${new Date().toISOString()}\n`);
-} catch (e) { }
+// 1. ABSOLUTE FIRST LINE LOGGING
+fs.writeFileSync(logPath, `BOOT ${new Date().toISOString()} | NODE ${process.version}\n`);
 
-const http = require('http');
-const server = http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('MULTIPATH BOOT SUCCESSFUL');
+const express = require('express');
+const app = express();
+const { sequelize } = require('./src/config/database');
+const db = require('./src/models');
+
+app.get('/api/health', (req, res) => {
+    res.json({ success: true, message: 'GymPulse API is alive on the new domain!' });
 });
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, '0.0.0.0', () => {
-    try { fs.appendFileSync('BOOT_LOG.txt', `SUCCESS: LISTENING ON ${PORT}\n`); } catch (e) { }
-});
+app.get('/', (req, res) => res.send('GymPulse Alive'));
+
+const start = async () => {
+    try {
+        await db.sequelize.authenticate();
+        fs.appendFileSync(logPath, 'DB Connected.\n');
+
+        // Hostinger usually provides PORT via env
+        const PORT = process.env.PORT || 3000;
+
+        // Some Hostinger setups prefer binding to localhost (127.0.0.1) 
+        // while others prefer 0.0.0.0. We will try 0.0.0.0 first.
+        app.listen(PORT, '0.0.0.0', () => {
+            fs.appendFileSync(logPath, `LISTENING ON ${PORT}\n`);
+        });
+    } catch (err) {
+        fs.appendFileSync(logPath, `ERROR: ${err.message}\n`);
+    }
+};
+
+start();
