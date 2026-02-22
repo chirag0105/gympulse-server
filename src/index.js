@@ -58,14 +58,38 @@ app.use('/api/measurements', require('./routes/measurements'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/notifications', require('./routes/notifications').router);
 
+const { sequelize } = require('./config/database');
+const db = require('./models');
+
 // Error handling
 app.use(notFound);
 app.use(errorHandler);
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`GymPulse API running on port ${PORT} in ${env.NODE_ENV} mode`);
-});
+// Database Sync & Start
+const startServer = async () => {
+    try {
+        console.log('Database sync in progress...');
+        // This will create/update tables automatically on boot
+        await db.sequelize.sync({ alter: false });
+        console.log('Database synced successfully.');
+
+        // Attempt to create super admin if it doesn't exist
+        try {
+            const createSuperAdmin = require('./seeders/create-super-admin');
+            await createSuperAdmin();
+        } catch (e) {
+            console.log('Seeder skipped or failed:', e.message);
+        }
+
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, () => {
+            console.log(`GymPulse API running on port ${PORT} in ${env.NODE_ENV} mode`);
+        });
+    } catch (err) {
+        console.error('SERVER FAILED TO START:', err);
+    }
+};
+
+startServer();
 
 module.exports = app;
