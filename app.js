@@ -1,20 +1,22 @@
+process.on('uncaughtException', (e) => {
+    require('fs').writeFileSync('BOOT_LOG.txt', String(e.stack || e));
+    process.exit(1);
+});
+process.on('unhandledRejection', (e) => {
+    require('fs').writeFileSync('BOOT_LOG.txt', String(e && e.stack ? e.stack : e));
+    process.exit(1);
+});
+require('fs').writeFileSync('BOOT_LOG.txt', `BOOT ${new Date().toISOString()}\nNODE ${process.version}\nCWD ${process.cwd()}\nPORT ${process.env.PORT}\n`);
+
 const http = require('http');
 const fs = require('fs');
-const path = require('path');
-
-// FORCE LOGGING
-const logFile = path.join(__dirname, 'BOOT_LOG.txt');
-fs.writeFileSync(logFile, 'NODE IS EXECUTING AT ' + new Date().toISOString() + '\n');
 
 const server = http.createServer((req, res) => {
-    fs.appendFileSync(logFile, 'Request received: ' + req.url + '\n');
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('GYMPULSE NODE IS WORKING WITHOUT EXPRESS\nTime: ' + new Date().toISOString());
+    res.end('AGENT DIAGNOSTIC RUNNING\nTime: ' + new Date().toISOString() + '\nCheck BOOT_LOG.txt');
 });
 
 const PORT = process.env.PORT || 3000;
-// Use 0.0.0.0 to ensure it binds to external requests
 server.listen(PORT, '0.0.0.0', () => {
-    fs.appendFileSync(logFile, 'Listening on ' + PORT + ' at 0.0.0.0\n');
-    console.log('Server running on ' + PORT);
+    fs.appendFileSync('BOOT_LOG.txt', `Listening on ${PORT}\n`);
 });
