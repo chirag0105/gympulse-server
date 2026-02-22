@@ -1,19 +1,19 @@
-const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const logPath = path.join(__dirname, 'BOOT_LOG.txt');
 
-// FORCE LOGGING
-const logFile = path.join(__dirname, 'BOOT_LOG.txt');
-fs.writeFileSync(logFile, 'NODE (INDEX.JS) IS EXECUTING AT ' + new Date().toISOString() + '\n');
+// Try to write to current dir and parent dir just in case
+try {
+    fs.writeFileSync('BOOT_LOG.txt', `STARTING FROM ${__filename} at ${new Date().toISOString()}\n`);
+} catch (e) { }
 
+const http = require('http');
 const server = http.createServer((req, res) => {
-    fs.appendFileSync(logFile, 'Request received: ' + req.url + '\n');
     res.writeHead(200, { 'Content-Type': 'text/plain' });
-    res.end('GYMPULSE NODE (INDEX) IS WORKING\nTime: ' + new Date().toISOString());
+    res.end('MULTIPATH BOOT SUCCESSFUL');
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
-    fs.appendFileSync(logFile, 'Listening on ' + PORT + ' at 0.0.0.0\n');
-    console.log('Server running');
+    try { fs.appendFileSync('BOOT_LOG.txt', `SUCCESS: LISTENING ON ${PORT}\n`); } catch (e) { }
 });
