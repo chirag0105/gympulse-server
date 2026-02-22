@@ -2,9 +2,9 @@
   "name": "gympulse-server",
   "version": "1.0.0",
   "description": "GymPulse API Server",
-  "main": "src/index.js",
+  "main": "app.js",
   "scripts": {
-    "start": "node src/index.js",
+    "start": "node app.js",
     "dev": "nodemon src/index.js",
     "db:migrate": "npx sequelize-cli db:migrate",
     "db:migrate:undo": "npx sequelize-cli db:migrate:undo:all",
