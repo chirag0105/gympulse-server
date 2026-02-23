@@ -18,7 +18,7 @@ app.use(morgan('combined'));
 app.use(express.json());
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get(['/health', '/api/health'], (req, res) => {
     res.json({
         success: true,
         message: 'GymPulse API is alive on Render!',
